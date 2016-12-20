@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,53 +15,54 @@ const confDirName string = ".godefine"
 const keyFileName string = "api.key"
 
 func main() {
-	// Check configuration file.
-	key, err := config()
-	if err != nil {
-		printQuery(fmt.Sprint(err))
-		return
+	// Check command line flags.
+	flags := Flags{
+		Key: flag.String("key", "", "usage"),
 	}
-	wordsapi.SetApiKey(key)
 
 	// Check command line arguments.
-	switch len(os.Args) {
-	case 1:
+	if len(os.Args) == 1 || strings.HasPrefix(os.Args[1], "-") {
 		printErr1("No word entered.")
-	case 2:
-		displayGetWord(os.Args[1])
+		return
 	}
 
-	//wordPtr := flag.String("", "", "word to define")
-	//flag.Parse()
+	// Check configuration file.
+	keyFromConfig := config(*flags.Key)
+	wordsapi.SetApiKey(keyFromConfig)
 
-	//fmt.Println("[ARGS]", args)
-	//fmt.Println("[ WRD]", *wordPtr)
+	// Display data from WordsAPI.
+	displayGetWord(os.Args[1])
 }
 
-func config() (key string, err error) {
+func config(keyFromFlag string) (key string) {
 	// Grab current user and location of confing file..
 	usr, _ := user.Current()
-	confDir := fmt.Sprintf("%s/%s/", usr.HomeDir, confDirName)
+	configDir := fmt.Sprintf("%s/%s/", usr.HomeDir, confDirName)
 
-	// Read configuration file for godefine.
-	confFd, err := ioutil.ReadFile(confDir + keyFileName)
+	// Declare local functions.
+	saveKey := func(kStr string) {
+		os.MkdirAll(configDir, 0700)
+		ioutil.WriteFile(configDir+keyFileName, []byte(kStr), 0700)
+	}
+
+	// Use key from flag if flag defined.
+	if keyFromFlag != "" {
+		key = keyFromFlag
+		saveKey(keyFromFlag)
+		return
+	}
+
+	// Use key from user input.
+	configFileData, err := ioutil.ReadFile(configDir + keyFileName)
 	if err != nil {
-		// Tell user that api.key is non-existant.
-		printErr1(fmt.Sprint(err))
-
-		// Query user to enter a key.
 		printQuery("Enter your WordsAPI Key")
 		fmt.Scanln(&key)
-		key = strings.TrimSpace(key)
-
-		// Store key in file.
-		os.MkdirAll(confDir, 0700)
-		ioutil.WriteFile(confDir+keyFileName, []byte(key), 0700)
-		err = nil
-
-	} else {
-		key = string(confFd)
+		saveKey(key)
+		return
 	}
+
+	// Use key from file.
+	key = string(configFileData)
 	return
 }
 
