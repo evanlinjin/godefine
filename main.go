@@ -17,7 +17,7 @@ const keyFileName string = "api.key"
 func main() {
 	// Check command line flags.
 	flags := Flags{
-		Key: flag.String("key", "", "usage"),
+		Key: flag.String("key", "", "API Key for accessing WordsAPI data."),
 	}
 
 	// Check command line arguments.
@@ -34,6 +34,7 @@ func main() {
 	displayGetWord(os.Args[1])
 }
 
+// Configure api key for WordsAPI.
 func config(keyFromFlag string) (key string) {
 	// Grab current user and location of confing file..
 	usr, _ := user.Current()
@@ -66,6 +67,7 @@ func config(keyFromFlag string) (key string) {
 	return
 }
 
+// Display GetWord data from WordsAPI.
 func displayGetWord(word string) {
 	obj, _ := wordsapi.GetWord(word)
 	switch obj.Word {
